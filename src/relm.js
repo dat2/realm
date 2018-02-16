@@ -59,7 +59,7 @@ export const Http = {
   })
 };
 
-/* Subscriptions (TIME) */
+/* Subscriptions (Time, Websocket) */
 const TICK = Symbol('Tick');
 
 const Tick = timestamp => ({ type: TICK, timestamp });
@@ -74,6 +74,34 @@ export const Time = {
   }),
   second: Tick(1000),
   inMinutes: timestamp => timestamp / 1000 / 60
+};
+
+const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
+
+const WEBSOCKET_SEND = Symbol('Websocket.send');
+
+export const Websocket = {
+  send: url => data => ({
+    type: WEBSOCKET_SEND,
+    url,
+    data
+  }),
+  listen: url => msg => ({
+    type: WEBSOCKET_LISTEN,
+    url,
+    msg
+  })
+};
+
+const SUB_NONE = Symbol('Sub.none');
+const SUB_BATCH = Symbol('Sub.batch');
+
+export const Sub = {
+  none: { type: SUB_NONE },
+  batch: subs => ({
+    type: SUB_BATCH,
+    subs
+  })
 };
 
 /* Relm */
@@ -93,17 +121,52 @@ class RelmRuntime {
       delete this.init;
     }
 
-    if (this.subscriptions.type === EVERY) {
-      const { tick: { timestamp }, msg } = this.subscriptions;
+    if (this.subscriptions.type === SUB_BATCH) {
+      this.subscriptions.subs.forEach(subscription => {
+        this._startSubscription(subscription);
+      });
+    } else {
+      this._startSubscription(this.subscriptions);
+    }
+  }
+
+  _startSubscription(subscription) {
+    if (subscription.type === EVERY) {
+      const { tick: { timestamp }, msg } = subscription;
       this._interval = setInterval(() => {
         this.dispatch({ type: msg, value: Date.now() });
       }, timestamp);
     }
+
+    if (subscription.type === WEBSOCKET_LISTEN) {
+      const { url, msg } = subscription;
+      const ws = new WebSocket(url);
+      ws.addEventListener('message', event => {
+        this.dispatch({ type: msg, value: event.data });
+      });
+      this._websockets = {
+        [url]: ws
+      };
+    }
   }
 
   stop() {
-    if (this.subscriptions === EVERY) {
+    if (this.subscriptions.type === SUB_BATCH) {
+      this.subscriptions.subs.forEach(subscription => {
+        this._stopSubscription(subscription);
+      });
+    } else {
+      this._stopSubscription(this.subscriptions);
+    }
+  }
+
+  _stopSubscription(subscription) {
+    if (subscription.type === EVERY) {
       clearInterval(this._interval);
+    }
+
+    if (subscription.type === WEBSOCKET_LISTEN) {
+      this._websockets[subscription.url].close();
     }
   }
 
@@ -141,6 +204,8 @@ class RelmRuntime {
             value: Err(err)
           });
         });
+    } else if (cmd.type === WEBSOCKET_SEND) {
+      this._websockets[cmd.url].send(cmd.data);
     }
   }
 }

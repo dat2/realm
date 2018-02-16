@@ -2,7 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import RelmApp, { Cmd, Random, Http, Time, Pair, Result } from './relm';
+import RelmApp, {
+  Cmd,
+  Sub,
+  Random,
+  Http,
+  Time,
+  Websocket,
+  Pair,
+  Result
+} from './relm';
 
 const model = {
   num: 0,
@@ -10,7 +19,9 @@ const model = {
   face: 1,
   topic: 'cats',
   gifUrl: 'waiting.gif',
-  tick: 0
+  tick: 0,
+  input: '',
+  messages: []
 };
 
 const init = Pair(model, Cmd.none);
@@ -41,6 +52,18 @@ const update = msg => model => {
       );
     case 'Tick':
       return Pair({ ...model, tick: msg.value }, Cmd.none);
+    case 'Input':
+      return Pair({ ...model, input: msg.value }, Cmd.none);
+    case 'Send':
+      return Pair(
+        { ...model, input: '' },
+        Websocket.send('ws://echo.websocket.org')(model.input)
+      );
+    case 'NewMessage':
+      return Pair(
+        { ...model, messages: [...model.messages, msg.value] },
+        Cmd.none
+      );
     default:
       return Pair(model, Cmd.none);
   }
@@ -53,7 +76,10 @@ const getRandomGif = topic =>
     )(json => json.data.image_url)
   );
 
-const subscriptions = Time.every(Time.second)('Tick');
+const subscriptions = Sub.batch([
+  Time.every(Time.second)('Tick'),
+  Websocket.listen('ws://echo.websocket.org')('NewMessage')
+]);
 
 function turns(n) {
   return n * 2 * Math.PI;
@@ -89,6 +115,9 @@ ReactDOM.render(
             stroke="#023963"
           />
         </svg>
+        <input value={model.input} onChange={onChange('Input')} />
+        <button onClick={onClick('Send')}>Send</button>
+        <ul>{model.messages.map(msg => <li key={msg}>{msg}</li>)}</ul>
       </div>
     )}
   </RelmApp>,
