@@ -4,14 +4,19 @@ import registerServiceWorker from './registerServiceWorker';
 
 import Relm from './relm';
 
-const model = 0;
+const model = {
+  num: 0,
+  text: ''
+};
 
 const update = msg => model => {
   switch (msg.type) {
     case 'Increment':
-      return model + 1;
+      return { ...model, num: model.num + 1 };
     case 'Decrement':
-      return model - 1;
+      return { ...model, num: model.num - 1 };
+    case 'Change':
+      return { ...model, text: msg.value };
     default:
       return model;
   }
@@ -20,11 +25,13 @@ const update = msg => model => {
 ReactDOM.render(
   <Relm model={model} update={update}>
     {
-      ({ model, onClick }) => (
+      ({ model, onClick, onChange }) => (
         <div>
           <button onClick={onClick('Decrement')}>-</button>
-          <div>{ model }</div>
+          <div>{ model.num }</div>
           <button onClick={onClick('Increment')}>+</button>
+          <input value={model.text} onChange={onChange('Change')} />
+          <p>{ model.text.split('').reverse().join('') }</p>
         </div>
       )
     }

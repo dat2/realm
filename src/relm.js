@@ -27,9 +27,21 @@ export default class Relm extends React.Component {
     }
   }
 
+  onChange = msg => e => {
+    if (typeof msg === typeof '') {
+      this.dispatch({ type: msg, value: e.target.value });
+    } else {
+      this.dispatch(msg(e.target.value));
+    }
+  }
+
   render() {
     return (
-      this.props.children({ model: this.state.model, onClick: this.onClick })
+      this.props.children({
+        model: this.state.model,
+        onClick: this.onClick,
+        onChange: this.onChange
+      })
     )
   }
 }
