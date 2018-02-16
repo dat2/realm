@@ -2,13 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import Relm, { Cmd, Pair, Random } from './relm';
+import RelmApp, { Cmd, Pair, Random } from './relm';
 
 const model = {
   num: 0,
   text: '',
-  face: 1
+  face: 1,
+  topic: 'cats',
+  gifUrl: 'waiting.gif'
 };
+
+const init = Pair(model, Random.generate('NewFace')(Random.int(1)(6)));
 
 const update = msg => model => {
   switch (msg.type) {
@@ -28,7 +32,7 @@ const update = msg => model => {
 };
 
 ReactDOM.render(
-  <Relm model={model} update={update}>
+  <RelmApp init={init} update={update}>
     {({ model, onClick, onChange }) => (
       <div>
         <button onClick={onClick('Decrement')}>-</button>
@@ -45,7 +49,7 @@ ReactDOM.render(
         <p>{model.face}</p>
       </div>
     )}
-  </Relm>,
+  </RelmApp>,
   document.getElementById('root')
 );
 

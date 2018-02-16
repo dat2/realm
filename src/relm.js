@@ -1,30 +1,34 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+const NONE = Symbol('none');
+
 export const Cmd = {
-  none: { type: 'none' }
+  none: { type: NONE }
 };
 
-export const Random = {
-  generate: msg => generator => ({
-    type: 'Random.generate',
-    msg,
-    generator
-  }),
-  int: min => max => ({
-    type: 'int',
-    min,
-    max
-  })
-};
+const PAIR = Symbol('Pair');
 
 export const Pair = (left, right) => ({
-  type: 'Pair',
+  type: PAIR,
   left,
   right
 });
 
-class RelmStore {
+const RANDOM_GENERATE = Symbol('Random.generate');
+
+export const Random = {
+  generate: msg => generator => ({
+    type: RANDOM_GENERATE,
+    msg,
+    generator
+  }),
+  int: min => max => ({
+    generate: () => Math.floor(Math.random() * Math.floor(max + 1 - min)) + min
+  })
+};
+
+class Relm {
   constructor({ model, update }) {
     this.model = model;
     this.update = update;
@@ -33,7 +37,7 @@ class RelmStore {
 
   dispatch(msg) {
     const result = this.update(msg)(this.model);
-    if (result.type === 'Pair') {
+    if (result.type === PAIR) {
       this.model = result.left;
       this.handleCmd(result.right);
     } else {
@@ -45,15 +49,8 @@ class RelmStore {
   }
 
   handleCmd(cmd) {
-    if (cmd.type === 'Random.generate') {
-      if (cmd.generator.type === 'int') {
-        const randomNumber =
-          Math.floor(
-            Math.random() *
-              Math.floor(cmd.generator.max + 1 - cmd.generator.min)
-          ) + cmd.generator.min;
-        this.dispatch({ type: cmd.msg, value: randomNumber });
-      }
+    if (cmd.type === RANDOM_GENERATE) {
+      this.dispatch({ type: cmd.msg, value: cmd.generator.generate() });
     }
   }
 
@@ -66,17 +63,30 @@ class RelmStore {
   }
 }
 
-export default class Relm extends React.Component {
+const createRelm = ({ model, init, update }, subscriber) => {
+  if (init) {
+    const relm = new Relm({ model: init.left, update });
+    const unsubscribe = relm.subscribe(subscriber);
+    relm.handleCmd(init.right);
+    return { relm, unsubscribe };
+  } else {
+    const relm = new Relm({ model, update });
+    const unsubscribe = relm.subscribe(subscriber);
+    return { relm, unsubscribe };
+  }
+};
+
+export default class RelmApp extends React.Component {
   static propTypes = {
     children: PropTypes.func.isRequired
   };
 
-  constructor(props) {
-    super(props);
-    this._relm = new RelmStore(props);
-    this._unsubscribe = this._relm.subscribe(() => {
+  componentWillMount() {
+    const { relm, unsubscribe } = createRelm(this.props, () => {
       this.setState({});
     });
+    this._relm = relm;
+    this._unsubscribe = unsubscribe;
   }
 
   componentWillUnmount() {
