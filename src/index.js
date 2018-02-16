@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import RelmApp, { Cmd, Pair, Random } from './relm';
+import RelmApp, { Cmd, Random, Http, Pair, Result } from './relm';
 
 const model = {
   num: 0,
@@ -12,7 +12,7 @@ const model = {
   gifUrl: 'waiting.gif'
 };
 
-const init = Pair(model, Random.generate('NewFace')(Random.int(1)(6)));
+const init = Pair(model, Cmd.none);
 
 const update = msg => model => {
   switch (msg.type) {
@@ -26,10 +26,29 @@ const update = msg => model => {
       return Pair(model, Random.generate('NewFace')(Random.int(1)(6)));
     case 'NewFace':
       return Pair({ ...model, face: msg.value }, Cmd.none);
+    case 'ChangeTopic':
+      return Pair({ ...model, topic: msg.value }, Cmd.none);
+    case 'MorePlease':
+      return Pair(model, getRandomGif(model.topic));
+    case 'NewGif':
+      return Pair(
+        Result({
+          Ok: gifUrl => ({ ...model, gifUrl }),
+          Err: () => model
+        })(msg.value),
+        Cmd.none
+      );
     default:
       return Pair(model, Cmd.none);
   }
 };
+
+const getRandomGif = topic =>
+  Http.send('NewGif')(
+    Http.get(
+      `https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=${topic}`
+    )(json => json.data.image_url)
+  );
 
 ReactDOM.render(
   <RelmApp init={init} update={update}>
@@ -47,6 +66,10 @@ ReactDOM.render(
         </p>
         <button onClick={onClick('Roll')}>Roll</button>
         <p>{model.face}</p>
+        <h2>{model.topic}</h2>
+        <input value={model.topic} onChange={onChange('ChangeTopic')} />
+        <img src={model.gifUrl} />
+        <button onClick={onClick('MorePlease')}>More Please</button>
       </div>
     )}
   </RelmApp>,

@@ -1,12 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const NONE = Symbol('none');
-
-export const Cmd = {
-  none: { type: NONE }
-};
-
+/* UTILS (Pair, Result) */
 const PAIR = Symbol('Pair');
 
 export const Pair = (left, right) => ({
@@ -14,6 +9,27 @@ export const Pair = (left, right) => ({
   left,
   right
 });
+
+const OK = Symbol('Ok');
+const Ok = value => ({ type: OK, value });
+
+const ERR = Symbol('Err');
+const Err = error => ({ type: ERR, error });
+
+export const Result = f => result => {
+  if (result.type === OK) {
+    return f.Ok(result.value);
+  } else {
+    return f.Err(result.error);
+  }
+};
+
+/* COMMANDS (None, Random, Http) */
+const NONE = Symbol('none');
+
+export const Cmd = {
+  none: { type: NONE }
+};
 
 const RANDOM_GENERATE = Symbol('Random.generate');
 
@@ -28,6 +44,22 @@ export const Random = {
   })
 };
 
+const HTTP_SEND = Symbol('Http.send');
+
+export const Http = {
+  get: url => jsonFn => ({
+    method: 'GET',
+    url,
+    jsonFn
+  }),
+  send: msg => request => ({
+    type: HTTP_SEND,
+    msg,
+    request
+  })
+};
+
+/* Relm */
 class Relm {
   constructor({ model, update }) {
     this.model = model;
@@ -36,6 +68,7 @@ class Relm {
   }
 
   dispatch(msg) {
+    console.log(msg);
     const result = this.update(msg)(this.model);
     if (result.type === PAIR) {
       this.model = result.left;
@@ -51,6 +84,21 @@ class Relm {
   handleCmd(cmd) {
     if (cmd.type === RANDOM_GENERATE) {
       this.dispatch({ type: cmd.msg, value: cmd.generator.generate() });
+    } else if (cmd.type === HTTP_SEND) {
+      fetch(cmd.request.url)
+        .then(response => response.json())
+        .then(json => {
+          this.dispatch({
+            type: cmd.msg,
+            value: Ok(cmd.request.jsonFn(json))
+          });
+        })
+        .catch(err => {
+          this.dispatch({
+            type: cmd.msg,
+            value: Err(err)
+          });
+        });
     }
   }
 
@@ -76,6 +124,7 @@ const createRelm = ({ model, init, update }, subscriber) => {
   }
 };
 
+/* React Class */
 export default class RelmApp extends React.Component {
   static propTypes = {
     children: PropTypes.func.isRequired
