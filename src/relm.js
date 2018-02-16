@@ -59,12 +59,56 @@ export const Http = {
   })
 };
 
+/* Subscriptions (TIME) */
+const TICK = Symbol('Tick');
+
+const Tick = timestamp => ({ type: TICK, timestamp });
+
+const EVERY = Symbol('every');
+
+export const Time = {
+  every: tick => msg => ({
+    type: EVERY,
+    tick,
+    msg
+  }),
+  second: Tick(1000),
+  inMinutes: timestamp => timestamp / 1000 / 60
+};
+
 /* Relm */
-class Relm {
-  constructor({ model, update }) {
+class RelmRuntime {
+  constructor({ model, init, update, subscriptions }) {
     this.model = model;
+    this.init = init;
     this.update = update;
-    this.subscribers = [];
+    this.subscriptions = subscriptions;
+    this.subscriber = () => {};
+  }
+
+  start() {
+    if (this.init) {
+      this.model = this.init.left;
+      this.handleCmd(this.init.right);
+      delete this.init;
+    }
+
+    if (this.subscriptions.type === EVERY) {
+      const { tick: { timestamp }, msg } = this.subscriptions;
+      this._interval = setInterval(() => {
+        this.dispatch({ type: msg, value: Date.now() });
+      }, timestamp);
+    }
+  }
+
+  stop() {
+    if (this.subscriptions === EVERY) {
+      clearInterval(this._interval);
+    }
+  }
+
+  subscribe(subscriber) {
+    this.subscriber = subscriber;
   }
 
   dispatch(msg) {
@@ -76,9 +120,7 @@ class Relm {
     } else {
       this.model = result;
     }
-    this.subscribers.forEach(subscriber => {
-      subscriber();
-    });
+    this.subscriber();
   }
 
   handleCmd(cmd) {
@@ -101,28 +143,7 @@ class Relm {
         });
     }
   }
-
-  subscribe(subscriber) {
-    this.subscribers.push(subscriber);
-    return () => {
-      const index = this.subscribers.indexOf(subscriber);
-      this.subscribers.splice(index, 1);
-    };
-  }
 }
-
-const createRelm = ({ model, init, update }, subscriber) => {
-  if (init) {
-    const relm = new Relm({ model: init.left, update });
-    const unsubscribe = relm.subscribe(subscriber);
-    relm.handleCmd(init.right);
-    return { relm, unsubscribe };
-  } else {
-    const relm = new Relm({ model, update });
-    const unsubscribe = relm.subscribe(subscriber);
-    return { relm, unsubscribe };
-  }
-};
 
 /* React Class */
 export default class RelmApp extends React.Component {
@@ -131,15 +152,13 @@ export default class RelmApp extends React.Component {
   };
 
   componentWillMount() {
-    const { relm, unsubscribe } = createRelm(this.props, () => {
-      this.setState({});
-    });
-    this._relm = relm;
-    this._unsubscribe = unsubscribe;
+    this._relm = new RelmRuntime(this.props);
+    this._unsubscribe = this._relm.subscribe(() => this.setState({}));
+    this._relm.start();
   }
 
   componentWillUnmount() {
-    this._unsubscribe();
+    this._relm.stop();
   }
 
   onClick = msg => e => {

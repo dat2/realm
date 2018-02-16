@@ -2,14 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import RelmApp, { Cmd, Random, Http, Pair, Result } from './relm';
+import RelmApp, { Cmd, Random, Http, Time, Pair, Result } from './relm';
 
 const model = {
   num: 0,
   text: '',
   face: 1,
   topic: 'cats',
-  gifUrl: 'waiting.gif'
+  gifUrl: 'waiting.gif',
+  tick: 0
 };
 
 const init = Pair(model, Cmd.none);
@@ -38,6 +39,8 @@ const update = msg => model => {
         })(msg.value),
         Cmd.none
       );
+    case 'Tick':
+      return Pair({ ...model, tick: msg.value }, Cmd.none);
     default:
       return Pair(model, Cmd.none);
   }
@@ -50,8 +53,14 @@ const getRandomGif = topic =>
     )(json => json.data.image_url)
   );
 
+const subscriptions = Time.every(Time.second)('Tick');
+
+function turns(n) {
+  return n * 2 * Math.PI;
+}
+
 ReactDOM.render(
-  <RelmApp init={init} update={update}>
+  <RelmApp init={init} update={update} subscriptions={subscriptions}>
     {({ model, onClick, onChange }) => (
       <div>
         <button onClick={onClick('Decrement')}>-</button>
@@ -68,8 +77,18 @@ ReactDOM.render(
         <p>{model.face}</p>
         <h2>{model.topic}</h2>
         <input value={model.topic} onChange={onChange('ChangeTopic')} />
-        <img src={model.gifUrl} />
+        <img alt="" src={model.gifUrl} />
         <button onClick={onClick('MorePlease')}>More Please</button>
+        <svg viewBox="0 0 100 100" width="300px">
+          <circle cx={50} cy={50} r={45} fill="#0B79CE" />
+          <line
+            x1={50}
+            y1={50}
+            x2={50 + 40 * Math.cos(turns(Time.inMinutes(model.tick)))}
+            y2={50 + 40 * Math.sin(turns(Time.inMinutes(model.tick)))}
+            stroke="#023963"
+          />
+        </svg>
       </div>
     )}
   </RelmApp>,
