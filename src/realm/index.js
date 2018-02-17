@@ -1,28 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-/* UTILS (Pair, Result) */
-const PAIR = Symbol('Pair');
-
-export const Pair = (left, right) => ({
-  type: PAIR,
-  left,
-  right
-});
-
-const OK = Symbol('Ok');
-const Ok = value => ({ type: OK, value });
-
-const ERR = Symbol('Err');
-const Err = error => ({ type: ERR, error });
-
-export const Result = f => result => {
-  if (result.type === OK) {
-    return f.Ok(result.value);
-  } else {
-    return f.Err(result.error);
-  }
-};
+import { identity, Pair, Ok, Err, PAIR } from './fp';
 
 /* COMMANDS (None, Random, Http) */
 const NONE = Symbol('none');
@@ -211,9 +190,19 @@ class RelmRuntime {
 }
 
 /* React Class */
-export default class RelmApp extends React.Component {
+const RealmContext = React.createContext({
+  model: {},
+  onClick: () => {},
+  onChange: () => {}
+});
+
+export class RealmProvider extends React.Component {
   static propTypes = {
-    children: PropTypes.func.isRequired
+    children: PropTypes.node
+  };
+
+  static defaultProps = {
+    children: null
   };
 
   componentWillMount() {
@@ -235,10 +224,28 @@ export default class RelmApp extends React.Component {
   };
 
   render() {
-    return this.props.children({
-      model: this._relm.model,
-      onClick: this.onClick,
-      onChange: this.onChange
-    });
+    return (
+      <RealmContext.Provider
+        value={{
+          model: this._relm.model,
+          onClick: this.onClick,
+          onChange: this.onChange
+        }}
+      >
+        {this.props.children}
+      </RealmContext.Provider>
+    );
   }
 }
+
+export const connect = (mapProps = identity) => Component => {
+  const Connect = props => {
+    return (
+      <RealmContext.Consumer>
+        {realmProps => <Component {...props} {...mapProps(realmProps)} />}
+      </RealmContext.Consumer>
+    );
+  };
+  Connect.displayName = `connect(${Component.displayName || Component.name})`;
+  return Connect;
+};

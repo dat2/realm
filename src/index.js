@@ -2,16 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import RelmApp, {
+import {
   Cmd,
   Sub,
   Random,
   Http,
   Time,
   Websocket,
-  Pair,
-  Result
-} from './relm';
+  RealmProvider,
+  connect
+} from './realm';
+import { Pair, Result } from './realm/fp';
 
 const model = {
   num: 0,
@@ -85,42 +86,114 @@ function turns(n) {
   return n * 2 * Math.PI;
 }
 
+const Counter = ({ Decrement, Increment, num }) => (
+  <div>
+    <h2>Counter Example</h2>
+    <button onClick={Decrement}>-</button>
+    <div>{num}</div>
+    <button onClick={Increment}>+</button>
+  </div>
+);
+
+const ConnectedCounter = connect(({ model, onClick }) => ({
+  Decrement: onClick('Decrement'),
+  Increment: onClick('Increment'),
+  num: model.num
+}))(Counter);
+
+const ReversedString = ({ Change, text }) => (
+  <div>
+    <h2>Reverse String Example</h2>
+    <input value={text} onChange={Change} />
+    <p>
+      {text
+        .split('')
+        .reverse()
+        .join('')}
+    </p>
+  </div>
+);
+
+const ConnectedReversedString = connect(({ model, onChange }) => ({
+  Change: onChange('Change'),
+  text: model.text
+}))(ReversedString);
+
+const RollDie = ({ Roll, face }) => (
+  <div>
+    <h2>Dice Example</h2>
+    <button onClick={Roll}>Roll</button>
+    <p>{face}</p>
+  </div>
+);
+
+const ConnectedRollDie = connect(({ model, onClick }) => ({
+  Roll: onClick('Roll'),
+  face: model.face
+}))(RollDie);
+
+const Giphy = ({ ChangeTopic, MorePlease, topic, gifUrl }) => (
+  <div>
+    <h2>Giphy Example</h2>
+    <h2>{topic}</h2>
+    <input value={topic} onChange={ChangeTopic} />
+    <button onClick={MorePlease}>More Please</button>
+    <div>
+      <img alt="" src={gifUrl} />
+    </div>
+  </div>
+);
+
+const ConnectedGiphy = connect(({ model, onClick, onChange }) => ({
+  ChangeTopic: onChange('ChangeTopic'),
+  MorePlease: onClick('MorePlease'),
+  topic: model.topic,
+  gifUrl: model.gifUrl
+}))(Giphy);
+
+const Clock = ({ tick }) => (
+  <div>
+    <h2>Time Example</h2>
+    <svg viewBox="0 0 100 100" width="300px">
+      <circle cx={50} cy={50} r={45} fill="#0B79CE" />
+      <line
+        x1={50}
+        y1={50}
+        x2={50 + 40 * Math.cos(turns(Time.inMinutes(tick)))}
+        y2={50 + 40 * Math.sin(turns(Time.inMinutes(tick)))}
+        stroke="#023963"
+      />
+    </svg>
+  </div>
+);
+
+const ConnectedClock = connect(({ model }) => ({ tick: model.tick }))(Clock);
+
+const Websockets = ({ Input, Send, input, messages }) => (
+  <div>
+    <h2>Websockets Example</h2>
+    <input value={input} onChange={Input} />
+    <button onClick={Send}>Send</button>
+    <ul>{messages.map(msg => <li key={msg}>{msg}</li>)}</ul>
+  </div>
+);
+
+const ConnectedWebsockets = connect(({ model, onClick, onChange }) => ({
+  Input: onChange('Input'),
+  Send: onClick('Send'),
+  input: model.input,
+  messages: model.messages
+}))(Websockets);
+
 ReactDOM.render(
-  <RelmApp init={init} update={update} subscriptions={subscriptions}>
-    {({ model, onClick, onChange }) => (
-      <div>
-        <button onClick={onClick('Decrement')}>-</button>
-        <div>{model.num}</div>
-        <button onClick={onClick('Increment')}>+</button>
-        <input value={model.text} onChange={onChange('Change')} />
-        <p>
-          {model.text
-            .split('')
-            .reverse()
-            .join('')}
-        </p>
-        <button onClick={onClick('Roll')}>Roll</button>
-        <p>{model.face}</p>
-        <h2>{model.topic}</h2>
-        <input value={model.topic} onChange={onChange('ChangeTopic')} />
-        <img alt="" src={model.gifUrl} />
-        <button onClick={onClick('MorePlease')}>More Please</button>
-        <svg viewBox="0 0 100 100" width="300px">
-          <circle cx={50} cy={50} r={45} fill="#0B79CE" />
-          <line
-            x1={50}
-            y1={50}
-            x2={50 + 40 * Math.cos(turns(Time.inMinutes(model.tick)))}
-            y2={50 + 40 * Math.sin(turns(Time.inMinutes(model.tick)))}
-            stroke="#023963"
-          />
-        </svg>
-        <input value={model.input} onChange={onChange('Input')} />
-        <button onClick={onClick('Send')}>Send</button>
-        <ul>{model.messages.map(msg => <li key={msg}>{msg}</li>)}</ul>
-      </div>
-    )}
-  </RelmApp>,
+  <RealmProvider init={init} update={update} subscriptions={subscriptions}>
+    <ConnectedCounter />
+    <ConnectedReversedString />
+    <ConnectedRollDie />
+    <ConnectedGiphy />
+    <ConnectedClock />
+    <ConnectedWebsockets />
+  </RealmProvider>,
   document.getElementById('root')
 );
 
