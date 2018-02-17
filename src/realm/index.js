@@ -1,5 +1,4 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import curry from 'lodash.curry';
 
 import { identity, Pair, Ok, Err, PAIR } from './fp';
 
@@ -13,29 +12,29 @@ export const Cmd = {
 const RANDOM_GENERATE = Symbol('Random.generate');
 
 export const Random = {
-  generate: msg => generator => ({
+  generate: curry((msg, generator) => ({
     type: RANDOM_GENERATE,
     msg,
     generator
-  }),
-  int: min => max => ({
+  })),
+  int: curry((min, max) => ({
     generate: () => Math.floor(Math.random() * Math.floor(max + 1 - min)) + min
-  })
+  }))
 };
 
 const HTTP_SEND = Symbol('Http.send');
 
 export const Http = {
-  get: url => jsonFn => ({
+  get: curry((url, jsonFn) => ({
     method: 'GET',
     url,
     jsonFn
-  }),
-  send: msg => request => ({
+  })),
+  send: curry((msg, request) => ({
     type: HTTP_SEND,
     msg,
     request
-  })
+  }))
 };
 
 /* Subscriptions (Time, Websocket) */
@@ -46,11 +45,11 @@ const Tick = timestamp => ({ type: TICK, timestamp });
 const EVERY = Symbol('every');
 
 export const Time = {
-  every: tick => msg => ({
+  every: curry((tick, msg) => ({
     type: EVERY,
     tick,
     msg
-  }),
+  })),
   second: Tick(1000),
   inMinutes: timestamp => timestamp / 1000 / 60
 };
@@ -60,16 +59,16 @@ const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
 const WEBSOCKET_SEND = Symbol('Websocket.send');
 
 export const Websocket = {
-  send: url => data => ({
+  send: curry((url, data) => ({
     type: WEBSOCKET_SEND,
     url,
     data
-  }),
-  listen: url => msg => ({
+  })),
+  listen: curry((url, msg) => ({
     type: WEBSOCKET_LISTEN,
     url,
     msg
-  })
+  }))
 };
 
 const SUB_NONE = Symbol('Sub.none');
@@ -83,8 +82,8 @@ export const Sub = {
   })
 };
 
-/* Relm */
-class RelmRuntime {
+/* Realm */
+export class RealmRuntime {
   constructor({ model, init, update, subscriptions }) {
     this.model = model;
     this.init = init;
@@ -188,64 +187,3 @@ class RelmRuntime {
     }
   }
 }
-
-/* React Class */
-const RealmContext = React.createContext({
-  model: {},
-  onClick: () => {},
-  onChange: () => {}
-});
-
-export class RealmProvider extends React.Component {
-  static propTypes = {
-    children: PropTypes.node
-  };
-
-  static defaultProps = {
-    children: null
-  };
-
-  componentWillMount() {
-    this._relm = new RelmRuntime(this.props);
-    this._unsubscribe = this._relm.subscribe(() => this.setState({}));
-    this._relm.start();
-  }
-
-  componentWillUnmount() {
-    this._relm.stop();
-  }
-
-  onClick = msg => e => {
-    this._relm.dispatch({ type: msg, e });
-  };
-
-  onChange = msg => e => {
-    this._relm.dispatch({ type: msg, value: e.target.value });
-  };
-
-  render() {
-    return (
-      <RealmContext.Provider
-        value={{
-          model: this._relm.model,
-          onClick: this.onClick,
-          onChange: this.onChange
-        }}
-      >
-        {this.props.children}
-      </RealmContext.Provider>
-    );
-  }
-}
-
-export const connect = (mapProps = identity) => Component => {
-  const Connect = props => {
-    return (
-      <RealmContext.Consumer>
-        {realmProps => <Component {...props} {...mapProps(realmProps)} />}
-      </RealmContext.Consumer>
-    );
-  };
-  Connect.displayName = `connect(${Component.displayName || Component.name})`;
-  return Connect;
-};

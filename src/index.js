@@ -2,17 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import {
-  Cmd,
-  Sub,
-  Random,
-  Http,
-  Time,
-  Websocket,
-  RealmProvider,
-  connect
-} from './realm';
+import { Cmd, Sub, Random, Http, Time, Websocket } from './realm';
 import { Pair, Result } from './realm/fp';
+import { RealmProvider, connect } from './realm/react';
 
 const model = {
   num: 0,
@@ -36,7 +28,7 @@ const update = msg => model => {
     case 'Change':
       return Pair({ ...model, text: msg.value }, Cmd.none);
     case 'Roll':
-      return Pair(model, Random.generate('NewFace')(Random.int(1)(6)));
+      return Pair(model, Random.generate('NewFace', Random.int(1, 6)));
     case 'NewFace':
       return Pair({ ...model, face: msg.value }, Cmd.none);
     case 'ChangeTopic':
@@ -58,7 +50,7 @@ const update = msg => model => {
     case 'Send':
       return Pair(
         { ...model, input: '' },
-        Websocket.send('ws://echo.websocket.org')(model.input)
+        Websocket.send('ws://echo.websocket.org', model.input)
       );
     case 'NewMessage':
       return Pair(
@@ -71,20 +63,18 @@ const update = msg => model => {
 };
 
 const getRandomGif = topic =>
-  Http.send('NewGif')(
+  Http.send(
+    'NewGif',
     Http.get(
-      `https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=${topic}`
-    )(json => json.data.image_url)
+      `https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=${topic}`,
+      json => json.data.image_url
+    )
   );
 
 const subscriptions = Sub.batch([
-  Time.every(Time.second)('Tick'),
-  Websocket.listen('ws://echo.websocket.org')('NewMessage')
+  Time.every(Time.second, 'Tick'),
+  Websocket.listen('ws://echo.websocket.org', 'NewMessage')
 ]);
-
-function turns(n) {
-  return n * 2 * Math.PI;
-}
 
 const Counter = ({ Decrement, Increment, num }) => (
   <div>
@@ -150,6 +140,10 @@ const ConnectedGiphy = connect(({ model, onClick, onChange }) => ({
   topic: model.topic,
   gifUrl: model.gifUrl
 }))(Giphy);
+
+function turns(n) {
+  return n * 2 * Math.PI;
+}
 
 const Clock = ({ tick }) => (
   <div>
