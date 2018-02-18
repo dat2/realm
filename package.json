@@ -1,16 +1,16 @@
 {
   "name": "realm-core",
   "version": "0.1.0",
-  "private": true,
+  "scripts": {
+    "build": "npx babel modules --out-dir lib",
+    "pretty": "npx prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
+  },
+  "main": "lib/index.js",
   "dependencies": {
     "babel-preset-stage-2": "^6.24.1",
     "lodash.curry": "^4.1.1",
     "prop-types": "^15.6.0",
     "react": "^16.3.0-alpha.1"
-  },
-  "scripts": {
-    "build": "npx babel modules --out-dir lib",
-    "pretty": "npx prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
