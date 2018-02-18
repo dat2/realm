@@ -1,14 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import registerServiceWorker from './registerServiceWorker';
 
-import { Cmd, Sub } from './realm';
-import { Pair, Result } from './realm/fp';
-import * as Random from './realm/random';
-import * as Http from './realm/http';
-import * as Time from './realm/time';
-import * as Websocket from './realm/websocket';
-import { RealmProvider, connect, onClick, onChange } from './realm/react';
+import { Cmd, Sub } from 'realm-core';
+import { Pair, Result } from 'realm-core/fp';
+import * as Random from 'realm-core/random';
+import * as Http from 'realm-core/http';
+import * as Time from 'realm-core/time';
+import * as Websocket from 'realm-core/websocket';
+import { RealmProvider, connect, onClick, onChange } from 'realm-core/react';
 
 const model = {
   num: 0,
@@ -194,5 +193,3 @@ ReactDOM.render(
   </RealmProvider>,
   document.getElementById('root')
 );
-
-registerServiceWorker();

@@ -1,22 +1,22 @@
 {
-  "name": "realm",
+  "name": "realm-core",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "babel-preset-stage-2": "^6.24.1",
     "lodash.curry": "^4.1.1",
     "prop-types": "^15.6.0",
-    "react": "^16.3.0-alpha.1",
-    "react-dom": "^16.3.0-alpha.1",
-    "react-scripts": "1.1.1"
+    "react": "^16.3.0-alpha.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
-    "pretty": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
+    "build": "npx babel modules --out-dir lib",
+    "pretty": "npx prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
   },
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-react": "^6.24.1",
+    "npx": "^9.7.1",
     "prettier": "^1.10.2"
   }
 }
