@@ -1,7 +1,8 @@
 import curry from 'lodash.curry';
 
-import { Ok, Err, PAIR } from './fp';
+import { PAIR } from './fp';
 import * as Random from './random';
+import * as Http from './http';
 
 /* COMMANDS (None, Random, Http) */
 const CMD_NONE = Symbol('Cmd.none');
@@ -11,40 +12,6 @@ export const Cmd = {
   noneCommandHandler: {
     symbol: CMD_NONE,
     handler: () => {}
-  }
-};
-
-const HTTP_SEND = Symbol('Http.send');
-
-export const Http = {
-  get: curry((url, jsonFn) => ({
-    method: 'GET',
-    url,
-    jsonFn
-  })),
-  send: curry((msg, request) => ({
-    type: HTTP_SEND,
-    msg,
-    request
-  })),
-  sendCommandHandler: {
-    symbol: HTTP_SEND,
-    handler: (cmd, dispatch) => {
-      fetch(cmd.request.url)
-        .then(response => response.json())
-        .then(json => {
-          dispatch({
-            type: cmd.msg,
-            value: Ok(cmd.request.jsonFn(json))
-          });
-        })
-        .catch(err => {
-          dispatch({
-            type: cmd.msg,
-            value: Err(err)
-          });
-        });
-    }
   }
 };
 
