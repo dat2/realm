@@ -4,7 +4,7 @@ import registerServiceWorker from './registerServiceWorker';
 
 import { Cmd, Sub, Random, Http, Time, Websocket } from './realm';
 import { Pair, Result } from './realm/fp';
-import { RealmProvider, connect } from './realm/react';
+import { RealmProvider, connect, onClick, onChange } from './realm/react';
 
 const model = {
   num: 0,
@@ -85,9 +85,9 @@ const Counter = ({ Decrement, Increment, num }) => (
   </div>
 );
 
-const ConnectedCounter = connect(({ model, onClick }) => ({
-  Decrement: onClick('Decrement'),
-  Increment: onClick('Increment'),
+const ConnectedCounter = connect(({ model, dispatch }) => ({
+  Decrement: onClick(dispatch('Decrement')),
+  Increment: onClick(dispatch('Increment')),
   num: model.num
 }))(Counter);
 
@@ -104,8 +104,8 @@ const ReversedString = ({ Change, text }) => (
   </div>
 );
 
-const ConnectedReversedString = connect(({ model, onChange }) => ({
-  Change: onChange('Change'),
+const ConnectedReversedString = connect(({ model, dispatch }) => ({
+  Change: onChange(dispatch('Change')),
   text: model.text
 }))(ReversedString);
 
@@ -117,8 +117,8 @@ const RollDie = ({ Roll, face }) => (
   </div>
 );
 
-const ConnectedRollDie = connect(({ model, onClick }) => ({
-  Roll: onClick('Roll'),
+const ConnectedRollDie = connect(({ model, dispatch }) => ({
+  Roll: onClick(dispatch('Roll')),
   face: model.face
 }))(RollDie);
 
@@ -134,9 +134,9 @@ const Giphy = ({ ChangeTopic, MorePlease, topic, gifUrl }) => (
   </div>
 );
 
-const ConnectedGiphy = connect(({ model, onClick, onChange }) => ({
-  ChangeTopic: onChange('ChangeTopic'),
-  MorePlease: onClick('MorePlease'),
+const ConnectedGiphy = connect(({ model, dispatch }) => ({
+  ChangeTopic: onChange(dispatch('ChangeTopic')),
+  MorePlease: onClick(dispatch('MorePlease')),
   topic: model.topic,
   gifUrl: model.gifUrl
 }))(Giphy);
@@ -172,9 +172,9 @@ const Websockets = ({ Input, Send, input, messages }) => (
   </div>
 );
 
-const ConnectedWebsockets = connect(({ model, onClick, onChange }) => ({
-  Input: onChange('Input'),
-  Send: onClick('Send'),
+const ConnectedWebsockets = connect(({ model, dispatch }) => ({
+  Input: onChange(dispatch('Input')),
+  Send: onClick(dispatch('Send')),
   input: model.input,
   messages: model.messages
 }))(Websockets);

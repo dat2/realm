@@ -6,8 +6,7 @@ import { identity } from './fp';
 
 const RealmContext = React.createContext({
   model: {},
-  onClick: () => {},
-  onChange: () => {}
+  dispatch: () => {}
 });
 
 export class RealmProvider extends React.Component {
@@ -20,30 +19,25 @@ export class RealmProvider extends React.Component {
   };
 
   componentWillMount() {
-    this._relm = new RealmRuntime(this.props);
-    this._unsubscribe = this._relm.subscribe(() => this.setState({}));
-    this._relm.start();
+    this._realm = new RealmRuntime(this.props);
+    this._unsubscribe = this._realm.subscribe(() => this.setState({}));
+    this._realm.start();
   }
 
   componentWillUnmount() {
-    this._relm.stop();
+    this._realm.stop();
   }
 
-  onClick = msg => e => {
-    this._relm.dispatch({ type: msg, e });
-  };
-
-  onChange = msg => e => {
-    this._relm.dispatch({ type: msg, value: e.target.value });
+  dispatch = msg => value => {
+    this._realm.dispatch({ type: msg, value });
   };
 
   render() {
     return (
       <RealmContext.Provider
         value={{
-          model: this._relm.model,
-          onClick: this.onClick,
-          onChange: this.onChange
+          model: this._realm.model,
+          dispatch: this.dispatch
         }}
       >
         {this.props.children}
@@ -62,4 +56,12 @@ export const connect = (mapProps = identity) => Component => {
   };
   Connect.displayName = `connect(${Component.displayName || Component.name})`;
   return Connect;
+};
+
+export const onClick = cb => e => {
+  cb(e);
+};
+
+export const onChange = cb => e => {
+  cb(e.target.value);
 };

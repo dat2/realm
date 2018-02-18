@@ -1,6 +1,6 @@
 import curry from 'lodash.curry';
 
-import { identity, Pair, Ok, Err, PAIR } from './fp';
+import { Ok, Err, PAIR } from './fp';
 
 /* COMMANDS (None, Random, Http) */
 const NONE = Symbol('none');
@@ -152,8 +152,7 @@ export class RealmRuntime {
     this.subscriber = subscriber;
   }
 
-  dispatch(msg) {
-    console.log(msg);
+  dispatch = msg => {
     const result = this.update(msg)(this.model);
     if (result.type === PAIR) {
       this.model = result.left;
@@ -162,7 +161,7 @@ export class RealmRuntime {
       this.model = result;
     }
     this.subscriber();
-  }
+  };
 
   handleCmd(cmd) {
     if (cmd.type === RANDOM_GENERATE) {
