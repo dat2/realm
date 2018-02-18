@@ -37,12 +37,48 @@ export const Http = {
   }))
 };
 
-/* Subscriptions (Time, Websocket) */
+/* Subscriptions (Sub, Time, Websocket) */
+const SUB_NONE = Symbol('Sub.none');
+const SUB_BATCH = Symbol('Sub.batch');
+
+export const Sub = {
+  none: { type: SUB_NONE },
+  batch: subs => ({
+    type: SUB_BATCH,
+    subs
+  }),
+  noneSubscriptionHandler: {
+    symbol: SUB_NONE,
+    create: () => {
+      return {
+        setup: () => {},
+        cleanup: () => {}
+      };
+    }
+  },
+  batchSubscriptionHandler: {
+    symbol: SUB_BATCH,
+    create: runtime => {
+      return {
+        setup: subscriptions => {
+          subscriptions.subs.forEach(subscription => {
+            runtime.setupSubscription(subscription);
+          });
+        },
+        cleanup: subscriptions => {
+          subscriptions.subs.forEach(subscription => {
+            runtime.cleanupSubscription(subscription);
+          });
+        }
+      };
+    }
+  }
+};
+
 const TICK = Symbol('Tick');
+const EVERY = Symbol('every');
 
 const Tick = timestamp => ({ type: TICK, timestamp });
-
-const EVERY = Symbol('every');
 
 export const Time = {
   every: curry((tick, msg) => ({
@@ -51,11 +87,27 @@ export const Time = {
     msg
   })),
   second: Tick(1000),
-  inMinutes: timestamp => timestamp / 1000 / 60
+  inMinutes: timestamp => timestamp / 1000 / 60,
+  everySubscriptionHandler: {
+    symbol: EVERY,
+    create: runtime => {
+      let _interval;
+      return {
+        setup: subscription => {
+          const { tick: { timestamp }, msg } = subscription;
+          _interval = setInterval(() => {
+            runtime.dispatch({ type: msg, value: Date.now() });
+          }, timestamp);
+        },
+        cleanup: subscription => {
+          clearInterval(_interval);
+        }
+      };
+    }
+  }
 };
 
 const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
-
 const WEBSOCKET_SEND = Symbol('Websocket.send');
 
 export const Websocket = {
@@ -68,18 +120,25 @@ export const Websocket = {
     type: WEBSOCKET_LISTEN,
     url,
     msg
-  }))
-};
-
-const SUB_NONE = Symbol('Sub.none');
-const SUB_BATCH = Symbol('Sub.batch');
-
-export const Sub = {
-  none: { type: SUB_NONE },
-  batch: subs => ({
-    type: SUB_BATCH,
-    subs
-  })
+  })),
+  listenSubscriptionHandler: {
+    symbol: WEBSOCKET_LISTEN,
+    create: runtime => {
+      let _ws;
+      return {
+        setup: subscription => {
+          const { url, msg } = subscription;
+          _ws = new WebSocket(url);
+          _ws.addEventListener('message', event => {
+            runtime.dispatch({ type: msg, value: event.data });
+          });
+        },
+        cleanup: subscription => {
+          _ws.close();
+        }
+      };
+    }
+  }
 };
 
 /* Realm */
@@ -88,8 +147,15 @@ export class RealmRuntime {
     this.model = model;
     this.init = init;
     this.update = update;
-    this.subscriptions = subscriptions;
     this.subscriber = () => {};
+    this.subscriptions = subscriptions;
+    this.subscriptionHandlers = {};
+    this.registerSubscriptionHandler(Sub.noneSubscriptionHandler);
+    this.registerSubscriptionHandler(Sub.batchSubscriptionHandler);
+  }
+
+  registerSubscriptionHandler({ symbol, create }) {
+    this.subscriptionHandlers[symbol] = create(this);
   }
 
   start() {
@@ -99,54 +165,24 @@ export class RealmRuntime {
       delete this.init;
     }
 
-    if (this.subscriptions.type === SUB_BATCH) {
-      this.subscriptions.subs.forEach(subscription => {
-        this._startSubscription(subscription);
-      });
-    } else {
-      this._startSubscription(this.subscriptions);
-    }
+    this.setupSubscription(this.subscriptions);
   }
 
-  _startSubscription(subscription) {
-    if (subscription.type === EVERY) {
-      const { tick: { timestamp }, msg } = subscription;
-      this._interval = setInterval(() => {
-        this.dispatch({ type: msg, value: Date.now() });
-      }, timestamp);
-    }
-
-    if (subscription.type === WEBSOCKET_LISTEN) {
-      const { url, msg } = subscription;
-      const ws = new WebSocket(url);
-      ws.addEventListener('message', event => {
-        this.dispatch({ type: msg, value: event.data });
-      });
-      this._websockets = {
-        [url]: ws
-      };
-    }
-  }
+  setupSubscription = subscription => {
+    const handler = this.subscriptionHandlers[subscription.type];
+    // TODO invariant
+    handler.setup(subscription);
+  };
 
   stop() {
-    if (this.subscriptions.type === SUB_BATCH) {
-      this.subscriptions.subs.forEach(subscription => {
-        this._stopSubscription(subscription);
-      });
-    } else {
-      this._stopSubscription(this.subscriptions);
-    }
+    this.cleanupSubscription(this.subscriptions);
   }
 
-  _stopSubscription(subscription) {
-    if (subscription.type === EVERY) {
-      clearInterval(this._interval);
-    }
-
-    if (subscription.type === WEBSOCKET_LISTEN) {
-      this._websockets[subscription.url].close();
-    }
-  }
+  cleanupSubscription = subscription => {
+    const handler = this.subscriptionHandlers[subscription.type];
+    // TODO invariant
+    handler.cleanup(subscription);
+  };
 
   subscribe(subscriber) {
     this.subscriber = subscriber;
@@ -182,7 +218,21 @@ export class RealmRuntime {
           });
         });
     } else if (cmd.type === WEBSOCKET_SEND) {
-      this._websockets[cmd.url].send(cmd.data);
+      // this._websockets[cmd.url].send(cmd.data);
     }
   }
 }
+
+export const createRealmRuntime = (
+  realmArgs,
+  subscriptionHandlers = [
+    Time.everySubscriptionHandler,
+    Websocket.listenSubscriptionHandler
+  ]
+) => {
+  const runtime = new RealmRuntime(realmArgs);
+  subscriptionHandlers.forEach(subscriptionHandler => {
+    runtime.registerSubscriptionHandler(subscriptionHandler);
+  });
+  return runtime;
+};

@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import { RealmRuntime } from './index.js';
+import { createRealmRuntime } from './index.js';
 import { identity } from './fp';
 
 const RealmContext = React.createContext({
@@ -19,7 +19,7 @@ export class RealmProvider extends React.Component {
   };
 
   componentWillMount() {
-    this._realm = new RealmRuntime(this.props);
+    this._realm = createRealmRuntime(this.props);
     this._unsubscribe = this._realm.subscribe(() => this.setState({}));
     this._realm.start();
   }
