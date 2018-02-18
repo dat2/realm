@@ -1,13 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { Cmd, Sub } from 'realm-core';
-import { Pair, Result } from 'realm-core/fp';
-import * as Random from 'realm-core/random';
-import * as Http from 'realm-core/http';
-import * as Time from 'realm-core/time';
-import * as Websocket from 'realm-core/websocket';
-import { RealmProvider, connect, onClick, onChange } from 'realm-core/react';
+import { Cmd, Sub } from '../src';
+import { Pair, Result } from '../src/fp';
+import * as Random from '../src/random';
+import * as Http from '../src/http';
+import * as Time from '../src/time';
+import * as Websocket from '../src/websocket';
+import { RealmProvider, connect, onClick, onChange } from '../src/react';
 
 const model = {
   num: 0,

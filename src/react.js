@@ -1,22 +1,20 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import createReactContext from 'create-react-context';
 
 import { createRealmRuntime } from './index.js';
 import { identity } from './fp';
 
-const RealmContext = React.createContext({
+const RealmContext = createReactContext({
   model: {},
   dispatch: () => {}
 });
 
 export class RealmProvider extends React.Component {
-  static propTypes = {
-    children: PropTypes.node
-  };
-
-  static defaultProps = {
-    children: null
-  };
+  constructor(...args) {
+    super(...args);
+    this.dispatch = this.dispatch.bind(this);
+  }
 
   componentWillMount() {
     this._realm = createRealmRuntime(this.props);
@@ -28,9 +26,11 @@ export class RealmProvider extends React.Component {
     this._realm.stop();
   }
 
-  dispatch = msg => value => {
-    this._realm.dispatch({ type: msg, value });
-  };
+  dispatch(msg) {
+    return value => {
+      this._realm.dispatch({ type: msg, value });
+    };
+  }
 
   render() {
     return (
@@ -45,6 +45,14 @@ export class RealmProvider extends React.Component {
     );
   }
 }
+
+RealmProvider.propTypes = {
+  children: PropTypes.node
+};
+
+RealmProvider.defaultProps = {
+  children: null
+};
 
 export const connect = (mapProps = identity) => Component => {
   const Connect = props => {

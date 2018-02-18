@@ -66,6 +66,8 @@ export class RealmRuntime {
     this.commandHandlers = {};
     this.registerCommandHandler(Cmd.noneCommandHandler);
     this.subscriber = () => {};
+
+    this.dispatch = this.dispatch.bind(this);
   }
 
   registerSubscriptionHandler({ symbol, create }) {
@@ -86,27 +88,27 @@ export class RealmRuntime {
     this.setupSubscription(this.subscriptions);
   }
 
-  setupSubscription = subscription => {
+  setupSubscription(subscription) {
     const handler = this.subscriptionHandlers[subscription.type];
     // TODO invariant
     handler.setup(subscription);
-  };
+  }
 
   stop() {
     this.cleanupSubscription(this.subscriptions);
   }
 
-  cleanupSubscription = subscription => {
+  cleanupSubscription(subscription) {
     const handler = this.subscriptionHandlers[subscription.type];
     // TODO invariant
     handler.cleanup(subscription);
-  };
+  }
 
   subscribe(subscriber) {
     this.subscriber = subscriber;
   }
 
-  dispatch = msg => {
+  dispatch(msg) {
     const result = this.update(msg)(this.model);
     if (result.type === PAIR) {
       this.model = result.left;
@@ -115,7 +117,7 @@ export class RealmRuntime {
       this.model = result;
     }
     this.subscriber();
-  };
+  }
 
   handleCmd(cmd) {
     const handler = this.commandHandlers[cmd.type];
