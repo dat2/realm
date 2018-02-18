@@ -3,10 +3,14 @@ import curry from 'lodash.curry';
 import { Ok, Err, PAIR } from './fp';
 
 /* COMMANDS (None, Random, Http) */
-const NONE = Symbol('none');
+const CMD_NONE = Symbol('Cmd.none');
 
 export const Cmd = {
-  none: { type: NONE }
+  none: { type: CMD_NONE },
+  noneCommandHandler: {
+    symbol: CMD_NONE,
+    handler: () => {}
+  }
 };
 
 const RANDOM_GENERATE = Symbol('Random.generate');
@@ -19,7 +23,13 @@ export const Random = {
   })),
   int: curry((min, max) => ({
     generate: () => Math.floor(Math.random() * Math.floor(max + 1 - min)) + min
-  }))
+  })),
+  generateCommandHandler: {
+    symbol: RANDOM_GENERATE,
+    handler: (cmd, dispatch) => {
+      dispatch({ type: cmd.msg, value: cmd.generator.generate() });
+    }
+  }
 };
 
 const HTTP_SEND = Symbol('Http.send');
@@ -34,7 +44,26 @@ export const Http = {
     type: HTTP_SEND,
     msg,
     request
-  }))
+  })),
+  sendCommandHandler: {
+    symbol: HTTP_SEND,
+    handler: (cmd, dispatch) => {
+      fetch(cmd.request.url)
+        .then(response => response.json())
+        .then(json => {
+          dispatch({
+            type: cmd.msg,
+            value: Ok(cmd.request.jsonFn(json))
+          });
+        })
+        .catch(err => {
+          dispatch({
+            type: cmd.msg,
+            value: Err(err)
+          });
+        });
+    }
+  }
 };
 
 /* Subscriptions (Sub, Time, Websocket) */
@@ -121,20 +150,38 @@ export const Websocket = {
     url,
     msg
   })),
+  _websockets: {},
+  _getOrOpen: url => {
+    if (url in Websocket._websockets) {
+      return Websocket._websockets[url];
+    } else {
+      Websocket._websockets[url] = new WebSocket(url);
+      return Websocket._websockets[url];
+    }
+  },
+  _close: url => {
+    // TODO reference counting
+    Websocket._websockets[url].close();
+  },
+  sendCommandHandler: {
+    symbol: WEBSOCKET_SEND,
+    handler: (cmd, dispatch) => {
+      Websocket._getOrOpen(cmd.url).send(cmd.data);
+    }
+  },
   listenSubscriptionHandler: {
     symbol: WEBSOCKET_LISTEN,
     create: runtime => {
-      let _ws;
       return {
         setup: subscription => {
           const { url, msg } = subscription;
-          _ws = new WebSocket(url);
-          _ws.addEventListener('message', event => {
+          const ws = Websocket._getOrOpen(url);
+          ws.addEventListener('message', event => {
             runtime.dispatch({ type: msg, value: event.data });
           });
         },
         cleanup: subscription => {
-          _ws.close();
+          Websocket._close(subscription.url);
         }
       };
     }
@@ -147,15 +194,21 @@ export class RealmRuntime {
     this.model = model;
     this.init = init;
     this.update = update;
-    this.subscriber = () => {};
     this.subscriptions = subscriptions;
     this.subscriptionHandlers = {};
     this.registerSubscriptionHandler(Sub.noneSubscriptionHandler);
     this.registerSubscriptionHandler(Sub.batchSubscriptionHandler);
+    this.commandHandlers = {};
+    this.registerCommandHandler(Cmd.noneCommandHandler);
+    this.subscriber = () => {};
   }
 
   registerSubscriptionHandler({ symbol, create }) {
     this.subscriptionHandlers[symbol] = create(this);
+  }
+
+  registerCommandHandler({ symbol, handler }) {
+    this.commandHandlers[symbol] = handler;
   }
 
   start() {
@@ -200,37 +253,28 @@ export class RealmRuntime {
   };
 
   handleCmd(cmd) {
-    if (cmd.type === RANDOM_GENERATE) {
-      this.dispatch({ type: cmd.msg, value: cmd.generator.generate() });
-    } else if (cmd.type === HTTP_SEND) {
-      fetch(cmd.request.url)
-        .then(response => response.json())
-        .then(json => {
-          this.dispatch({
-            type: cmd.msg,
-            value: Ok(cmd.request.jsonFn(json))
-          });
-        })
-        .catch(err => {
-          this.dispatch({
-            type: cmd.msg,
-            value: Err(err)
-          });
-        });
-    } else if (cmd.type === WEBSOCKET_SEND) {
-      // this._websockets[cmd.url].send(cmd.data);
-    }
+    const handler = this.commandHandlers[cmd.type];
+    // TODO invariant
+    handler(cmd, this.dispatch);
   }
 }
 
 export const createRealmRuntime = (
   realmArgs,
+  commandHandlers = [
+    Random.generateCommandHandler,
+    Http.sendCommandHandler,
+    Websocket.sendCommandHandler
+  ],
   subscriptionHandlers = [
     Time.everySubscriptionHandler,
     Websocket.listenSubscriptionHandler
   ]
 ) => {
   const runtime = new RealmRuntime(realmArgs);
+  commandHandlers.forEach(commandHandler => {
+    runtime.registerCommandHandler(commandHandler);
+  });
   subscriptionHandlers.forEach(subscriptionHandler => {
     runtime.registerSubscriptionHandler(subscriptionHandler);
   });
