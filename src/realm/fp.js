@@ -16,7 +16,7 @@ export const Ok = value => ({ type: OK, value });
 
 export const Err = error => ({ type: ERR, error });
 
-export const Result = curry(f => result => {
+export const Result = curry((f, result) => {
   if (result.type === OK) {
     return f.Ok(result.value);
   } else {

@@ -2,10 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import { Cmd, Sub, Time, Websocket } from './realm';
+import { Cmd, Sub, Websocket } from './realm';
 import { Pair, Result } from './realm/fp';
 import * as Random from './realm/random';
 import * as Http from './realm/http';
+import * as Time from './realm/time';
 import { RealmProvider, connect, onClick, onChange } from './realm/react';
 
 const model = {

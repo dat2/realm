@@ -3,6 +3,7 @@ import curry from 'lodash.curry';
 import { PAIR } from './fp';
 import * as Random from './random';
 import * as Http from './http';
+import * as Time from './time';
 
 /* COMMANDS (None, Random, Http) */
 const CMD_NONE = Symbol('Cmd.none');
@@ -47,38 +48,6 @@ export const Sub = {
           subscriptions.subs.forEach(subscription => {
             runtime.cleanupSubscription(subscription);
           });
-        }
-      };
-    }
-  }
-};
-
-const TICK = Symbol('Tick');
-const EVERY = Symbol('every');
-
-const Tick = timestamp => ({ type: TICK, timestamp });
-
-export const Time = {
-  every: curry((tick, msg) => ({
-    type: EVERY,
-    tick,
-    msg
-  })),
-  second: Tick(1000),
-  inMinutes: timestamp => timestamp / 1000 / 60,
-  everySubscriptionHandler: {
-    symbol: EVERY,
-    create: runtime => {
-      let _interval;
-      return {
-        setup: subscription => {
-          const { tick: { timestamp }, msg } = subscription;
-          _interval = setInterval(() => {
-            runtime.dispatch({ type: msg, value: Date.now() });
-          }, timestamp);
-        },
-        cleanup: subscription => {
-          clearInterval(_interval);
         }
       };
     }
