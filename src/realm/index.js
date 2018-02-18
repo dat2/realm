@@ -1,6 +1,7 @@
 import curry from 'lodash.curry';
 
 import { Ok, Err, PAIR } from './fp';
+import * as Random from './random';
 
 /* COMMANDS (None, Random, Http) */
 const CMD_NONE = Symbol('Cmd.none');
@@ -10,25 +11,6 @@ export const Cmd = {
   noneCommandHandler: {
     symbol: CMD_NONE,
     handler: () => {}
-  }
-};
-
-const RANDOM_GENERATE = Symbol('Random.generate');
-
-export const Random = {
-  generate: curry((msg, generator) => ({
-    type: RANDOM_GENERATE,
-    msg,
-    generator
-  })),
-  int: curry((min, max) => ({
-    generate: () => Math.floor(Math.random() * Math.floor(max + 1 - min)) + min
-  })),
-  generateCommandHandler: {
-    symbol: RANDOM_GENERATE,
-    handler: (cmd, dispatch) => {
-      dispatch({ type: cmd.msg, value: cmd.generator.generate() });
-    }
   }
 };
 

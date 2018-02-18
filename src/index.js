@@ -2,8 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import registerServiceWorker from './registerServiceWorker';
 
-import { Cmd, Sub, Random, Http, Time, Websocket } from './realm';
+import { Cmd, Sub, Http, Time, Websocket } from './realm';
 import { Pair, Result } from './realm/fp';
+import * as Random from './realm/random';
 import { RealmProvider, connect, onClick, onChange } from './realm/react';
 
 const model = {
