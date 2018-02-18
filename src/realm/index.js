@@ -1,9 +1,8 @@
-import curry from 'lodash.curry';
-
 import { PAIR } from './fp';
 import * as Random from './random';
 import * as Http from './http';
 import * as Time from './time';
+import * as Websocket from './websocket';
 
 /* COMMANDS (None, Random, Http) */
 const CMD_NONE = Symbol('Cmd.none');
@@ -48,58 +47,6 @@ export const Sub = {
           subscriptions.subs.forEach(subscription => {
             runtime.cleanupSubscription(subscription);
           });
-        }
-      };
-    }
-  }
-};
-
-const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
-const WEBSOCKET_SEND = Symbol('Websocket.send');
-
-export const Websocket = {
-  send: curry((url, data) => ({
-    type: WEBSOCKET_SEND,
-    url,
-    data
-  })),
-  listen: curry((url, msg) => ({
-    type: WEBSOCKET_LISTEN,
-    url,
-    msg
-  })),
-  _websockets: {},
-  _getOrOpen: url => {
-    if (url in Websocket._websockets) {
-      return Websocket._websockets[url];
-    } else {
-      Websocket._websockets[url] = new WebSocket(url);
-      return Websocket._websockets[url];
-    }
-  },
-  _close: url => {
-    // TODO reference counting
-    Websocket._websockets[url].close();
-  },
-  sendCommandHandler: {
-    symbol: WEBSOCKET_SEND,
-    handler: (cmd, dispatch) => {
-      Websocket._getOrOpen(cmd.url).send(cmd.data);
-    }
-  },
-  listenSubscriptionHandler: {
-    symbol: WEBSOCKET_LISTEN,
-    create: runtime => {
-      return {
-        setup: subscription => {
-          const { url, msg } = subscription;
-          const ws = Websocket._getOrOpen(url);
-          ws.addEventListener('message', event => {
-            runtime.dispatch({ type: msg, value: event.data });
-          });
-        },
-        cleanup: subscription => {
-          Websocket._close(subscription.url);
         }
       };
     }
