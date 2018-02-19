@@ -28,15 +28,3 @@ export function close(url: string) {
     }
   }
 }
-
-// export const listenSubscriptionHandler = {
-//   create: runtime => {
-//     return {
-//       setup: subscription => {
-//       },
-//       cleanup: subscription => {
-//         _close(subscription.url);
-//       }
-//     };
-//   }
-// };

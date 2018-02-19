@@ -1,149 +1,65 @@
-import { PAIR } from './fp';
-import * as Random from './random';
-import * as Http from './http';
-import * as Time from './time';
-import * as Websocket from './websocket';
+// @flow
+import type { Pair } from './fp';
+import type { Cmd } from './cmd';
+import type { Sub, SubHandler } from './sub';
 
-/* COMMANDS (None, Random, Http) */
-const CMD_NONE = Symbol('Cmd.none');
+import { handleCmd } from './cmd';
+import { createSubHandler } from './sub';
 
-export const Cmd = {
-  none: { type: CMD_NONE },
-  noneCommandHandler: {
-    symbol: CMD_NONE,
-    handler: () => {}
-  }
+type UpdateFnReturn<Model, Msg> = Pair<Model, Cmd<Msg>> | Model;
+
+type UpdateFn<Model, Msg> = Msg => Model => UpdateFnReturn<Model, Msg>;
+
+export type RuntimeArgs<Model, Msg> = {
+  model: Model,
+  init: ?Pair<Model, Cmd<Msg>>,
+  update: UpdateFn<Model, Msg>,
+  subscriptions: Sub<Msg>
 };
 
-/* Subscriptions (Sub, Time, Websocket) */
-const SUB_NONE = Symbol('Sub.none');
-const SUB_BATCH = Symbol('Sub.batch');
+export class RealmRuntime<Model, Msg> {
+  model: Model;
+  init: ?Pair<Model, Cmd<Msg>>;
+  update: UpdateFn<Model, Msg>;
+  subscriptionHandler: SubHandler<Msg>;
+  subscriber: void => void;
 
-export const Sub = {
-  none: { type: SUB_NONE },
-  batch: subs => ({
-    type: SUB_BATCH,
-    subs
-  }),
-  noneSubscriptionHandler: {
-    symbol: SUB_NONE,
-    create: () => {
-      return {
-        setup: () => {},
-        cleanup: () => {}
-      };
-    }
-  },
-  batchSubscriptionHandler: {
-    symbol: SUB_BATCH,
-    create: runtime => {
-      return {
-        setup: subscriptions => {
-          subscriptions.subs.forEach(subscription => {
-            runtime.setupSubscription(subscription);
-          });
-        },
-        cleanup: subscriptions => {
-          subscriptions.subs.forEach(subscription => {
-            runtime.cleanupSubscription(subscription);
-          });
-        }
-      };
-    }
-  }
-};
-
-/* Realm */
-export class RealmRuntime {
-  constructor({ model, init, update, subscriptions }) {
+  constructor({ model, init, update, subscriptions }: RuntimeArgs<Model, Msg>) {
     this.model = model;
     this.init = init;
     this.update = update;
-    this.subscriptions = subscriptions;
-    this.subscriptionHandlers = {};
-    this.registerSubscriptionHandler(Sub.noneSubscriptionHandler);
-    this.registerSubscriptionHandler(Sub.batchSubscriptionHandler);
-    this.commandHandlers = {};
-    this.registerCommandHandler(Cmd.noneCommandHandler);
+    this.subscriptionHandler = createSubHandler(
+      subscriptions,
+      this.dispatch.bind(this)
+    );
     this.subscriber = () => {};
-
-    this.dispatch = this.dispatch.bind(this);
-  }
-
-  registerSubscriptionHandler({ symbol, create }) {
-    this.subscriptionHandlers[symbol] = create(this);
-  }
-
-  registerCommandHandler({ symbol, handler }) {
-    this.commandHandlers[symbol] = handler;
   }
 
   start() {
     if (this.init) {
       this.model = this.init.left;
-      this.handleCmd(this.init.right);
+      handleCmd(this.init.right, this.dispatch.bind(this));
       delete this.init;
     }
-
-    this.setupSubscription(this.subscriptions);
-  }
-
-  setupSubscription(subscription) {
-    const handler = this.subscriptionHandlers[subscription.type];
-    // TODO invariant
-    handler.setup(subscription);
+    this.subscriptionHandler.setup();
   }
 
   stop() {
-    this.cleanupSubscription(this.subscriptions);
+    this.subscriptionHandler.cleanup();
   }
 
-  cleanupSubscription(subscription) {
-    const handler = this.subscriptionHandlers[subscription.type];
-    // TODO invariant
-    handler.cleanup(subscription);
-  }
-
-  subscribe(subscriber) {
+  subscribe(subscriber: void => void) {
     this.subscriber = subscriber;
   }
 
-  dispatch(msg) {
+  dispatch(msg: Msg) {
     const result = this.update(msg)(this.model);
-    if (result.type === PAIR) {
+    if (result.type === 'pair') {
       this.model = result.left;
-      this.handleCmd(result.right);
+      handleCmd(result.right, this.dispatch.bind(this));
     } else {
       this.model = result;
     }
     this.subscriber();
   }
-
-  handleCmd(cmd) {
-    const handler = this.commandHandlers[cmd.type];
-    // TODO invariant
-    handler(cmd, this.dispatch);
-  }
 }
-
-export const createRealmRuntime = (
-  realmArgs,
-  commandHandlers = [
-    Random.generateCommandHandler,
-    Http.sendCommandHandler,
-    Websocket.sendCommandHandler
-  ],
-  subscriptionHandlers = [
-    Time.everySubscriptionHandler,
-    Websocket.listenSubscriptionHandler
-  ]
-) => {
-  const runtime = new RealmRuntime(realmArgs);
-  commandHandlers.forEach(commandHandler => {
-    runtime.registerCommandHandler(commandHandler);
-  });
-  subscriptionHandlers.forEach(subscriptionHandler => {
-    runtime.registerSubscriptionHandler(subscriptionHandler);
-  });
-  return runtime;
-};

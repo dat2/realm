@@ -85,7 +85,7 @@ export function websocketListen<M>(
 export function createSubHandler<M>(
   subscription: Sub<M>,
   dispatch: M => void
-): SubHandler {
+): SubHandler<M> {
   if (subscription.type === 'batch') {
     return new BatchSubHandler(subscription, dispatch);
   } else if (subscription.type === 'time.every') {
@@ -97,19 +97,19 @@ export function createSubHandler<M>(
   }
 }
 
-interface SubHandler {
+export interface SubHandler<M> {
   setup(): void;
   cleanup(): void;
 }
 
-class NoneSubHandler<M> implements SubHandler {
+class NoneSubHandler<M> implements SubHandler<M> {
   constructor(subscription: NoneSub, dispatch: M => void) {}
   setup() {}
   cleanup() {}
 }
 
-class BatchSubHandler<M> implements SubHandler {
-  handlers: Array<SubHandler>;
+class BatchSubHandler<M> implements SubHandler<M> {
+  handlers: Array<SubHandler<M>>;
 
   constructor(subscription: BatchSub<M>, dispatch: M => void) {
     this.handlers = subscription.subs.map(subscription => {
@@ -130,7 +130,7 @@ class BatchSubHandler<M> implements SubHandler {
   }
 }
 
-class TimeEverySubHandler<M> implements SubHandler {
+class TimeEverySubHandler<M> implements SubHandler<M> {
   subscription: TimeEverySub<M>;
   dispatch: M => void;
   interval: ?IntervalID;
@@ -154,7 +154,7 @@ class TimeEverySubHandler<M> implements SubHandler {
   }
 }
 
-class WebsocketListenSubHandler<M> implements SubHandler {
+class WebsocketListenSubHandler<M> implements SubHandler<M> {
   subscription: WebsocketListenSub<M>;
   dispatch: M => void;
   ws: ?WebSocket;
