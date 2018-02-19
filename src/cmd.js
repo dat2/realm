@@ -1,66 +1,70 @@
 // @flow
 import { Ok, Err } from './fp';
 
-const HTTP_SEND = 'HTTP_SEND';
-
-export type Cmd<T> = NoneCmd | HttpSendCmd<T>;
+export type Cmd = NoneCmd | BatchCmd | SendCmd;
 
 export type NoneCmd = {
   type: 'none'
 };
 
-export type HttpMethod = 'GET' | 'POST';
-
-export type Request<T> = {
-  method: HttpMethod,
-  url: string,
-  jsonFn: any => T
+export type BatchCmd = {
+  type: 'batch',
+  cmds: Array<Cmd>
 };
 
-export type HttpSendCmd<T> = {
-  type: 'HTTP_SEND',
+export type HttpMethod = 'GET' | 'POST';
+
+export type Request = {
+  method: HttpMethod,
+  url: string,
+  transform: any => any
+};
+
+export type SendCmd = {
+  type: 'send',
   msg: string,
-  request: Request<T>
+  request: Request
 };
 
 // create
-export function get<T>(url: string, jsonFn: any => T): Request<T> {
+export function get(url: string, transform: any => any): Request {
   return {
     method: 'GET',
     url,
-    jsonFn
+    transform
   };
 }
 
-export function send<T>(msg: string, request: Request<T>): HttpSendCmd<T> {
+export function send(msg: string, request: Request): SendCmd {
   return {
-    type: HTTP_SEND,
+    type: 'send',
     msg,
     request
   };
 }
 
 // handle
-export function handleCmd<T>(cmd: Cmd<T>, dispatch: any => void) {
-  switch (cmd.type) {
-    case HTTP_SEND:
-      handleHttpSendCmd(cmd, dispatch);
-      return;
-    default:
-      return;
+export function handleCmd(cmd: Cmd, dispatch: any => void) {
+  if (cmd.type === 'batch') {
+    handleBatchCmd(cmd, dispatch);
+  } else if (cmd.type === 'send') {
+    handleSendCmd(cmd, dispatch);
   }
 }
 
-export function handleHttpSendCmd<T>(
-  cmd: HttpSendCmd<T>,
-  dispatch: any => void
-) {
+export function handleBatchCmd(cmd: BatchCmd, dispatch: any => void) {
+  cmd.cmds.forEach(cmd => {
+    handleCmd(cmd, dispatch);
+  });
+}
+
+export function handleSendCmd(cmd: SendCmd, dispatch: any => void) {
   fetch(cmd.request.url)
     .then(response => response.json())
     .then(json => {
       dispatch({
         type: cmd.msg,
-        value: Ok(cmd.request.jsonFn(json))
+        value: Ok(cmd.request.transform(json))
       });
     })
     .catch(err => {
