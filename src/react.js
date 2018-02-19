@@ -1,8 +1,10 @@
+// @flow
+
 import React from 'react';
-import PropTypes from 'prop-types';
 import createReactContext from 'create-react-context';
 
-import { createRealmRuntime } from './index.js';
+import type { RuntimeArgs } from './runtime';
+import { RealmRuntime } from './runtime';
 import { identity } from './fp';
 
 const RealmContext = createReactContext({
@@ -10,15 +12,17 @@ const RealmContext = createReactContext({
   dispatch: () => {}
 });
 
-export class RealmProvider extends React.Component {
-  constructor(...args) {
-    super(...args);
-    this.dispatch = this.dispatch.bind(this);
+export class RealmProvider<Model, Msg> extends React.Component<RuntimeArgs<Model, Msg>> {
+  _realm: RealmRuntime<Model, Msg>;
+  _unsubscribe: void => void;
+
+  constructor(props: RuntimeArgs<Model, Msg>) {
+    super(props);
+    this._realm = new RealmRuntime(this.props);
+    this._unsubscribe = this._realm.subscribe(() => this.setState({}));
   }
 
   componentWillMount() {
-    this._realm = createRealmRuntime(this.props);
-    this._unsubscribe = this._realm.subscribe(() => this.setState({}));
     this._realm.start();
   }
 
@@ -26,10 +30,8 @@ export class RealmProvider extends React.Component {
     this._realm.stop();
   }
 
-  dispatch(msg) {
-    return value => {
-      this._realm.dispatch({ type: msg, value });
-    };
+  dispatch(msg: Msg) {
+    this._realm.dispatch(msg);
   }
 
   render() {
@@ -46,15 +48,7 @@ export class RealmProvider extends React.Component {
   }
 }
 
-RealmProvider.propTypes = {
-  children: PropTypes.node
-};
-
-RealmProvider.defaultProps = {
-  children: null
-};
-
-export const connect = (mapProps = identity) => Component => {
+export const connect = (mapProps) => Component => {
   const Connect = props => {
     return (
       <RealmContext.Consumer>
@@ -64,12 +58,4 @@ export const connect = (mapProps = identity) => Component => {
   };
   Connect.displayName = `connect(${Component.displayName || Component.name})`;
   return Connect;
-};
-
-export const onClick = cb => e => {
-  cb(e);
-};
-
-export const onChange = cb => e => {
-  cb(e.target.value);
 };

@@ -86,8 +86,8 @@ const Counter = ({ Decrement, Increment, num }) => (
 );
 
 const ConnectedCounter = connect(({ model, dispatch }) => ({
-  Decrement: onClick(dispatch('Decrement')),
-  Increment: onClick(dispatch('Increment')),
+  Decrement: onClick(dispatch, 'Decrement'),
+  Increment: onClick(dispatch, 'Increment'),
   num: model.num
 }))(Counter);
 

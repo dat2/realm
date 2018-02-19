@@ -12,8 +12,6 @@
   },
   "dependencies": {
     "create-react-context": "^0.1.6",
-    "lodash.curry": "^4.1.1",
-    "prop-types": "^15.6.0",
     "react": "^16.2.0"
   },
   "devDependencies": {

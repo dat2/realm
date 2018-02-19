@@ -22,7 +22,7 @@ export class RealmRuntime<Model, Msg> {
   init: ?Pair<Model, Cmd<Msg>>;
   update: UpdateFn<Model, Msg>;
   subscriptionHandler: SubHandler<Msg>;
-  subscriber: void => void;
+  subscriber: ?(void => void);
 
   constructor({ model, init, update, subscriptions }: RuntimeArgs<Model, Msg>) {
     this.model = model;
@@ -48,8 +48,11 @@ export class RealmRuntime<Model, Msg> {
     this.subscriptionHandler.cleanup();
   }
 
-  subscribe(subscriber: void => void) {
+  subscribe(subscriber: void => void): void => void {
     this.subscriber = subscriber;
+    return () => {
+      this.subscriber = null;
+    };
   }
 
   dispatch(msg: Msg) {
