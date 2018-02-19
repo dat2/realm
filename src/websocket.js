@@ -29,26 +29,10 @@ export function close(url: string) {
   }
 }
 
-// listen
-
-// const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
-
-// export const listen = curry((url, msg) => ({
-//   type: WEBSOCKET_LISTEN,
-//   url,
-//   msg
-// }));
-
 // export const listenSubscriptionHandler = {
-//   symbol: WEBSOCKET_LISTEN,
 //   create: runtime => {
 //     return {
 //       setup: subscription => {
-//         const { url, msg } = subscription;
-//         const ws = _getOrOpen(url);
-//         ws.addEventListener('message', event => {
-//           runtime.dispatch({ type: msg, value: event.data });
-//         });
 //       },
 //       cleanup: subscription => {
 //         _close(subscription.url);
