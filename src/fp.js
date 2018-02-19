@@ -1,23 +1,43 @@
+// @flow
 import curry from 'lodash.curry';
 
-export const PAIR = Symbol('Pair');
-export const OK = Symbol('Ok');
+type Tuple<L, R> = {
+  type: 'PAIR',
+  left: L,
+  right: R,
+};
+
+type Result<O, E> =
+    { type: 'Ok', value: O }
+  | { type: 'Err', error: E };
+
 export const ERR = Symbol('Err');
 
-export const identity = x => x;
+export function identity<T>(x: T): T {
+  return x;
+}
 
 export const Pair = curry((left, right) => ({
-  type: PAIR,
   left,
   right
 }));
 
-export const Ok = value => ({ type: OK, value });
+export function Ok<O, R>(value: O): Result<O, R> {
+  return {
+    type: 'Ok',
+    value
+  };
+}
 
-export const Err = error => ({ type: ERR, error });
+export function Err<O, E>(error: E): Result<O, E> {
+  return {
+    type: 'Err',
+    error
+  };
+};
 
-export const Result = curry((f, result) => {
-  if (result.type === OK) {
+export const MatchResult = curry((f, result) => {
+  if (result.type === 'Ok') {
     return f.Ok(result.value);
   } else {
     return f.Err(result.error);

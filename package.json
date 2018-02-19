@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "repository": "https://github.com/dat2/realm",
   "license": "MIT",
-  "source": "src/index.js",
-  "main": "dist/index.js",
+  "main": "lib/index.js",
   "scripts": {
-    "build": "microbundle build",
-    "watch": "microbundle watch",
-    "pretty": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
+    "build": "babel src --out-dir lib",
+    "watch": "babel src --out-dir lib --watch",
+    "pretty": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'",
+    "flow": "flow"
   },
   "dependencies": {
     "create-react-context": "^0.1.6",
@@ -17,7 +17,11 @@
     "react": "^16.2.0"
   },
   "devDependencies": {
-    "microbundle": "^0.4.3",
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-flow": "^6.23.0",
+    "babel-preset-react": "^6.24.1",
+    "flow-bin": "^0.66.0",
     "prettier": "^1.10.2"
   }
 }

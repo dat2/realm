@@ -1,13 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { Cmd, Sub } from '../src';
-import { Pair, Result } from '../src/fp';
-import * as Random from '../src/random';
-import * as Http from '../src/http';
-import * as Time from '../src/time';
-import * as Websocket from '../src/websocket';
-import { RealmProvider, connect, onClick, onChange } from '../src/react';
+import { Cmd, Sub } from '../lib';
+import { Pair, MatchResult } from '../lib/fp';
+import * as Random from '../lib/random';
+import * as Http from '../lib/http';
+import * as Time from '../lib/time';
+import * as Websocket from '../lib/websocket';
+import { RealmProvider, connect, onClick, onChange } from '../lib/react';
 
 const model = {
   num: 0,
@@ -40,7 +40,7 @@ const update = msg => model => {
       return Pair(model, getRandomGif(model.topic));
     case 'NewGif':
       return Pair(
-        Result({
+        MatchResult({
           Ok: gifUrl => ({ ...model, gifUrl }),
           Err: () => model
         })(msg.value),
