@@ -1,37 +1,52 @@
-import curry from 'lodash.curry';
-
+// @flow
 import { Ok, Err } from './fp';
 
-const HTTP_SEND = Symbol('Http.send');
+type HttpMethod = 'GET' | 'POST';
 
-export const get = curry((url, jsonFn) => ({
-  method: 'GET',
-  url,
-  jsonFn
-}));
-
-export const send = curry((msg, request) => ({
-  type: HTTP_SEND,
-  msg,
-  request
-}));
-
-export const sendCommandHandler = {
-  symbol: HTTP_SEND,
-  handler: (cmd, dispatch) => {
-    fetch(cmd.request.url)
-      .then(response => response.json())
-      .then(json => {
-        dispatch({
-          type: cmd.msg,
-          value: Ok(cmd.request.jsonFn(json))
-        });
-      })
-      .catch(err => {
-        dispatch({
-          type: cmd.msg,
-          value: Err(err)
-        });
-      });
-  }
+type Request<T> = {
+  method: HttpMethod,
+  url: string,
+  jsonFn: any => T
 };
+
+type SendCmd<T> = {
+  type: 'HTTP_SEND',
+  msg: string,
+  request: Request<T>
+};
+
+export function get<T>(url: string, jsonFn: any => T): Request<T> {
+  return {
+    method: 'GET',
+    url,
+    jsonFn
+  };
+}
+
+export function send<T>(msg: string, request: Request<T>): SendCmd<T> {
+  return  {
+    type: 'HTTP_SEND',
+    msg,
+    request
+  };
+}
+
+// export const sendCommandHandler = {
+//   symbol: 'HTTP_SEND',
+//   handler: (cmd, dispatch) => {
+//     fetch(cmd.request.url)
+//       .then(response => response.json())
+//       .then(json => {
+//         dispatch({
+//           type: cmd.msg,
+//           value: Ok(cmd.request.jsonFn(json))
+//         });
+//       })
+//       .catch(err => {
+//         dispatch({
+//           type: cmd.msg,
+//           value: Err(err)
+//         });
+//       });
+//   }
+// };
