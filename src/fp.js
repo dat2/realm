@@ -1,13 +1,13 @@
 // @flow
-type Tuple<L, R> = {
+export type Pair<L, R> = {
   type: 'PAIR',
   left: L,
   right: R
 };
 
-type Result<O, E> = { type: 'Ok', value: O } | { type: 'Err', error: E };
+export type Result<O, E> = { type: 'Ok', value: O } | { type: 'Err', error: E };
 
-type ResultCata<O, E, T> = {
+export type ResultCata<O, E, T> = {
   Ok: O => T,
   Err: E => T
 };
@@ -16,7 +16,7 @@ export function identity<T>(x: T): T {
   return x;
 }
 
-export function Pair<L, R>(left: L, right: R): Tuple<L, R> {
+export function pair<L, R>(left: L, right: R): Pair<L, R> {
   return {
     type: 'PAIR',
     left,
