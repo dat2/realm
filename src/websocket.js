@@ -1,57 +1,58 @@
-import curry from 'lodash.curry';
+// @flow
+type Rc<T> = {
+  count: number,
+  obj: T
+};
 
-const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
-const WEBSOCKET_SEND = Symbol('Websocket.send');
+const _websockets: { [string]: Rc<WebSocket> } = {};
 
-export const send = curry((url, data) => ({
-  type: WEBSOCKET_SEND,
-  url,
-  data
-}));
-
-export const listen = curry((url, msg) => ({
-  type: WEBSOCKET_LISTEN,
-  url,
-  msg
-}));
-
-const _websockets = {};
-
-const _getOrOpen = url => {
+export function getOrOpen(url: string) {
   if (url in _websockets) {
-    return _websockets[url];
+    const obj = _websockets[url];
+    obj.count++;
+    return obj.obj;
   } else {
-    _websockets[url] = new WebSocket(url);
-    return _websockets[url];
-  }
-};
-
-const _close = url => {
-  // TODO reference counting
-  _websockets[url].close();
-};
-
-export const sendCommandHandler = {
-  symbol: WEBSOCKET_SEND,
-  handler: (cmd, dispatch) => {
-    _getOrOpen(cmd.url).send(cmd.data);
-  }
-};
-
-export const listenSubscriptionHandler = {
-  symbol: WEBSOCKET_LISTEN,
-  create: runtime => {
-    return {
-      setup: subscription => {
-        const { url, msg } = subscription;
-        const ws = _getOrOpen(url);
-        ws.addEventListener('message', event => {
-          runtime.dispatch({ type: msg, value: event.data });
-        });
-      },
-      cleanup: subscription => {
-        _close(subscription.url);
-      }
+    _websockets[url] = {
+      count: 1,
+      obj: new WebSocket(url)
     };
+    return _websockets[url].obj;
   }
-};
+}
+
+export function close(url: string) {
+  if (url in _websockets) {
+    _websockets[url].count--;
+    if (_websockets[url].count === 0) {
+      _websockets[url].obj.close();
+    }
+  }
+}
+
+// listen
+
+// const WEBSOCKET_LISTEN = Symbol('Websocket.listen');
+
+// export const listen = curry((url, msg) => ({
+//   type: WEBSOCKET_LISTEN,
+//   url,
+//   msg
+// }));
+
+// export const listenSubscriptionHandler = {
+//   symbol: WEBSOCKET_LISTEN,
+//   create: runtime => {
+//     return {
+//       setup: subscription => {
+//         const { url, msg } = subscription;
+//         const ws = _getOrOpen(url);
+//         ws.addEventListener('message', event => {
+//           runtime.dispatch({ type: msg, value: event.data });
+//         });
+//       },
+//       cleanup: subscription => {
+//         _close(subscription.url);
+//       }
+//     };
+//   }
+// };

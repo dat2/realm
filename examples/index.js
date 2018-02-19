@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import { Cmd, Sub } from '../lib';
-import { Pair, MatchResult } from '../lib/fp';
+import { pair, MatchResult } from '../lib/fp';
 import * as Random from '../lib/random';
 import * as Http from '../lib/http';
 import * as Time from '../lib/time';
@@ -20,58 +20,55 @@ const model = {
   messages: []
 };
 
-const init = Pair(model, Cmd.none);
+const init = pair(model, Cmd.none);
 
 const update = msg => model => {
   switch (msg.type) {
     case 'Increment':
-      return Pair({ ...model, num: model.num + 1 }, Cmd.none);
+      return pair({ ...model, num: model.num + 1 }, Cmd.none);
     case 'Decrement':
-      return Pair({ ...model, num: model.num - 1 }, Cmd.none);
+      return pair({ ...model, num: model.num - 1 }, Cmd.none);
     case 'Change':
-      return Pair({ ...model, text: msg.value }, Cmd.none);
+      return pair({ ...model, text: msg.value }, Cmd.none);
     case 'Roll':
-      return Pair(model, Random.generate('NewFace', Random.int(1, 6)));
+      return pair(model, Random.generate(Random.int(1, 6), value => ({ type: 'NewFace', value })));
     case 'NewFace':
-      return Pair({ ...model, face: msg.value }, Cmd.none);
+      return pair({ ...model, face: msg.value }, Cmd.none);
     case 'ChangeTopic':
-      return Pair({ ...model, topic: msg.value }, Cmd.none);
+      return pair({ ...model, topic: msg.value }, Cmd.none);
     case 'MorePlease':
-      return Pair(model, getRandomGif(model.topic));
+      return pair(model, getRandomGif(model.topic));
     case 'NewGif':
-      return Pair(
-        MatchResult({
-          Ok: gifUrl => ({ ...model, gifUrl }),
-          Err: () => model
-        })(msg.value),
+      return pair(
+        { ...model, gifUrl: msg.value },
         Cmd.none
       );
     case 'Tick':
-      return Pair({ ...model, tick: msg.value }, Cmd.none);
+      return pair({ ...model, tick: msg.value }, Cmd.none);
     case 'Input':
-      return Pair({ ...model, input: msg.value }, Cmd.none);
+      return pair({ ...model, input: msg.value }, Cmd.none);
     case 'Send':
-      return Pair(
+      return pair(
         { ...model, input: '' },
         Websocket.send('ws://echo.websocket.org', model.input)
       );
     case 'NewMessage':
-      return Pair(
+      return pair(
         { ...model, messages: [...model.messages, msg.value] },
         Cmd.none
       );
     default:
-      return Pair(model, Cmd.none);
+      return pair(model, Cmd.none);
   }
 };
 
 const getRandomGif = topic =>
   Http.send(
-    'NewGif',
-    Http.get(
-      `https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=${topic}`,
-      json => json.data.image_url
-    )
+    Http.get(`https://api.giphy.com/v1/gifs/random?api_key=dc6zaTOxFJmzC&tag=${topic}`),
+    {
+      Ok: json => ({ type: 'NewGif', value: json.data.image_url }),
+      Err: () => ({ type: 'NewGifError' }),
+    },
   );
 
 const subscriptions = Sub.batch([
